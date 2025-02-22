@@ -1,0 +1,102 @@
+[
+    {
+      "id": "1",
+      "name": "Content Generation",
+      "template": "Write a {{content_type}} about {{topic}} for {{target_audience}}. The tone should be {{tone}} and the length should be approximately {{length}} words. Include the following keywords: {{keywords}}.",
+      "variables": [
+        { "name": "content_type", "type": "select", "label": "Content Type", "options": ["Blog Post", "Email", "Social Media Post", "Article", "Story"] },
+        { "name": "topic", "type": "text", "label": "Topic" },
+        { "name": "target_audience", "type": "text", "label": "Target Audience" },
+        { "name": "tone", "type": "select", "label": "Tone", "options": ["Formal", "Informal", "Humorous", "Professional"] },
+        { "name": "length", "type": "number", "label": "Approximate Word Count" },
+        { "name": "keywords", "type": "text", "label": "Keywords (comma-separated)" }
+      ]
+    },
+    {
+      "id": "2",
+      "name": "Summarization",
+      "template": "Summarize the following text in {{length}} sentences or less: {{text}}. Focus on the key points related to {{focus_area}}.",
+      "variables": [
+        { "name": "length", "type": "number", "label": "Maximum Number of Sentences" },
+        { "name": "text", "type": "textarea", "label": "The Text to Summarize" },
+        { "name": "focus_area", "type": "text", "label": "Specific Aspect to Focus On (Optional)" }
+      ]
+    },
+    {
+      "id": "3a",
+      "name": "Code Generation",
+      "template": "Generate {{language}} code to {{functionality}}. Consider these constraints: {{constraints}}. The code should be {{style}}.",
+      "variables": [
+        { "name": "language", "type": "select", "label": "Language", "options": ["JavaScript", "Python", "Java", "C++", "Go"] },
+        { "name": "functionality", "type": "text", "label": "What should the code do?" },
+        { "name": "constraints", "type": "text", "label": "Any Limitations or Requirements?" },
+        { "name": "style", "type": "select", "label": "Code Style", "options": ["Clean", "Efficient", "Readable"] }
+      ]
+    },
+    {
+      "id": "3b",
+      "name": "Code Explanation",
+      "template": "Explain the following code snippet:\n{{code}}. Focus on {{aspects}}. Provide examples of how to use it.",
+      "variables": [
+        { "name": "code", "type": "textarea", "label": "The Code to Explain" },
+        { "name": "aspects", "type": "text", "label": "Specific Aspects to Explain (Optional)" }
+      ]
+    },
+    {
+      "id": "4",
+      "name": "Translation",
+      "template": "Translate the following text from {{source_language}} to {{target_language}}:\n{{text}}",
+      "variables": [
+        { "name": "source_language", "type": "select", "label": "Source Language", "options": ["English", "Spanish", "French", "German", "Chinese", "Japanese"] },
+        { "name": "target_language", "type": "select", "label": "Target Language", "options": ["English", "Spanish", "French", "German", "Chinese", "Japanese"] },
+        { "name": "text", "type": "textarea", "label": "The Text to Translate" }
+      ]
+    },
+    {
+      "id": "5",
+      "name": "Question Answering",
+      "template": "Answer the following question, using the context provided:\nQuestion: {{question}}\nContext: {{context}}",
+      "variables": [
+        { "name": "question", "type": "text", "label": "The Question to Answer" },
+        { "name": "context", "type": "textarea", "label": "Relevant Information (Optional)" }
+      ]
+    },
+    {
+      "id": "6",
+      "name": "Storytelling",
+      "template": "Continue the following story:\n{{story_so_far}}\nThe next section should include: {{plot_points}} and have a {{mood}} mood.",
+      "variables": [
+        { "name": "story_so_far", "type": "textarea", "label": "The Existing Story Text" },
+        { "name": "plot_points", "type": "text", "label": "Keywords for Next Part (comma-separated)" },
+        { "name": "mood", "type": "select", "label": "Mood", "options": ["Exciting", "Suspenseful", "Sad", "Humorous"] }
+      ]
+    },
+    {
+      "id": "7",
+      "name": "Brainstorming",
+      "template": "Brainstorm {{number_of_ideas}} ideas for {{topic}}. These ideas should be related to {{keywords}}.",
+      "variables": [
+        { "name": "number_of_ideas", "type": "number", "label": "How Many Ideas?" },
+        { "name": "topic", "type": "text", "label": "The Topic to Brainstorm About" },
+        { "name": "keywords", "type": "text", "label": "Keywords to Guide Ideas (Optional)" }
+      ]
+    },
+    {
+      "id": "8",
+      "name": "Explain Concept",
+      "template": "Explain {{concept}} in simple terms",
+      "variables": [{ "name": "concept", "type": "text", "label": "Concept" }]
+    },
+    {
+      "id": "9",
+      "name": "Code Review",
+      "template": "Review this code and suggest improvements:\n{{code}}",
+      "variables": [{ "name": "code", "type": "textarea", "label": "Code" }]
+    },
+    {
+      "id": "10",
+      "name": "Summarize Text",
+      "template": "Summarize the following text:\n{{text}}",
+      "variables": [{ "name": "text", "type": "textarea", "label": "Text" }]
+    }
+  ]

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { supabase } from '../supabaseClient'; // Adjust path as needed
+import { supabase } from '../utils/supabaseClient'; // Adjust path as needed
 
 
 

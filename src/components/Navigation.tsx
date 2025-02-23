@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MessageSquare, LayoutDashboard, Library, Sun, Moon } from 'lucide-react';
+import { MessageSquare, LayoutDashboard, Library, Sun, Moon, Home } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { supabase } from "../supabaseClient";  //Import the client to see the new information
+import { supabase } from "../utils/supabaseClient";  //Import the client to see the new information
 
 function Navigation() {
     const location = useLocation();
@@ -22,7 +22,8 @@ function Navigation() {
     }, [])
 
     const navItems = [
-        {path: '/', icon: MessageSquare, label: 'Chat'},
+        {path: '/', icon: Home, label: 'Home'},
+        {path: '/chat', icon: MessageSquare, label: 'Chat'},
         {path: '/dashboard', icon: LayoutDashboard, label: 'Analytics'},
         {path: '/library', icon: Library, label: 'Prompt Library'},
         {path: '/AIHistory', icon: MessageSquare, label: 'AI History'}

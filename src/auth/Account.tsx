@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient'; // Adjust path as needed
+import { supabase } from '../utils/supabaseClient'; // Adjust path as needed
 
 const Account = () => {
   const [displayName, setDisplayName] = useState('');

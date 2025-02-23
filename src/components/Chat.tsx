@@ -15,7 +15,6 @@ interface Message {
 interface ChatSession {
     id: string;
     messages: Message[]; // Array of messages within this session
-    sessionTimestamp: Date;  // Add the sessionTimestamp
 }
 
 function Chat() {
@@ -49,20 +48,20 @@ function Chat() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!prompt.trim()) return;
-    
+
         const newSessionId = Date.now().toString();  // Unique ID for this prompt/response session
-    
+
         // Get the prompt template
         const template = promptTemplates.find((t: any) => t.id === selectedTemplate);
         let newUserMessageContent = prompt
-    
+
         // Append template variable values to the prompt
         if (template?.variables && templateVariables) {
           template.variables.forEach((variable: any) => {
             newUserMessageContent += `\n{{${variable.name}}}: ${templateVariables[variable.name] || ''}`;
           });
         }
-    
+
         const newUserMessage: Message = {
             id: newSessionId + '-user',  // Unique ID
             content: newUserMessageContent,
@@ -70,10 +69,10 @@ function Chat() {
             timestamp: new Date(),
             promptTemplateId: selectedTemplate || undefined,
         };
-    
+
         setIsLoading(true);
         setError(null);
-    
+
         try {
             const aiResponse = await generateAIResponse(prompt);
             const newAssistantMessage: Message = {
@@ -83,13 +82,12 @@ function Chat() {
                 timestamp: new Date(),
                 promptTemplateId: selectedTemplate || undefined,
             };
-    
+
             const newSession: ChatSession = {
                 id: newSessionId,
                 messages: [newUserMessage, newAssistantMessage],
-                sessionTimestamp: newUserMessage.timestamp, // Add this line to set sessionTimestamp
             };
-    
+
             setChatSessions(prev => [newSession, ...prev]); // Add to the beginning of array.
             setSelectedSessionId(newSessionId); //Automatically shows the latest messages
         } catch (err: any) {

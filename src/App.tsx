@@ -18,8 +18,10 @@ import { ThemeProvider } from './context/ThemeContext';
 import { ToastContainer } from 'react-toastify'; // Correct import
 import 'react-toastify/dist/ReactToastify.css';
 import './index.css';
+import { useTheme } from './context/ThemeContext';
 
 function App() {
+    const { isDarkTheme } = useTheme();
     return (
         <ThemeProvider>
             <AuthProvider>
@@ -40,7 +42,19 @@ function App() {
                             <Route path="/auth" element={<AuthPage />} />
                         </Routes>
                     </div>
-                    <ToastContainer /> {/* Correct placement */}
+                    <ToastContainer
+                        position="bottom-right" // Position of the toast notifications (Best practice is top right)
+                        autoClose={5000} // Auto close the toast notifications after 5 seconds (5 seconds is better)
+                        hideProgressBar={false} // Show the progress bar
+                        newestOnTop={true} // Show the newest toast notifications on top in general better UX true
+                        closeOnClick // Close the toast notifications when clicked
+                        rtl={false} // Right to left text direction
+                        pauseOnFocusLoss // Pause the toast notifications when the window is not focused
+                        draggable
+                        pauseOnHover
+                        theme={isDarkTheme ? "dark" : "light"}
+                        limit={3}  // Limit the number of toast notifications to 3
+                    />
                 </BrowserRouter>
             </AuthProvider>
         </ThemeProvider>

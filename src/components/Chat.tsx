@@ -1,7 +1,7 @@
 // src/components/Chat.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, Loader2, BookMarked } from 'lucide-react';
-import { generateAIResponse } from '../lib/googleAI';
+import { generateAIResponse, listAvailableModels } from '../lib/googleAI';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../utils/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -11,18 +11,9 @@ import promptTemplatesData from '../data/promptTemplates.json';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { toast } from 'react-toastify'; // Import toast here too
+import { toast } from 'react-toastify';
 
 const promptTemplates: PromptTemplate[] = promptTemplatesData as PromptTemplate[];
-
-const availableModels = [
-    "gemini-pro",
-    "gemini-1.5-flash",
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite-preview-02-05",
-    "gemini-1.5-flash-8b",
-    "gemini-1.5-pro",
-];
 
 function Chat() {
     const { isDarkTheme } = useTheme();
@@ -38,9 +29,39 @@ function Chat() {
     const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
     const mainContentRef = useRef<HTMLDivElement>(null);
     const [maxSessionsDisplayed, setMaxSessionsDisplayed] = useState(5);
-    const [selectedModel, setSelectedModel] = useState<string>(availableModels[0]);
+    const [selectedModel, setSelectedModel] = useState<string>('');
     const { session, user, isLoading: isAuthLoading, error: authError } = useAuth();
     const [showAuthDialog, setShowAuthDialog] = useState(false);
+    const [availableModels, setAvailableModels] = useState<string[]>([]);
+
+    const defaultModel = "gemini-2.0-flash"; // Hardcoded default
+
+    useEffect(() => {
+        const fetchModels = async () => {
+            try {
+                const models = await listAvailableModels();
+                if (models) {
+                    setAvailableModels(models);
+                    console.log("Fetched models:", models); // Log fetched models
+
+                    if (models.includes(defaultModel)) {
+                        setSelectedModel(defaultModel);
+                        console.log("Selected model (default):", defaultModel); // Log selected model
+                    } else if (models.length > 0) {
+                        setSelectedModel(models[0]);
+                        console.log("Selected model (fallback):", models[0]); // Log selected model
+                    } else {
+                        toast.warn("No AI models are currently available.");
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching available models:", error);
+                toast.error("Failed to load available AI models.");
+            }
+        };
+
+        fetchModels();
+    }, []);
 
     useEffect(() => {
         if (!isAuthLoading && !user) {
@@ -98,7 +119,19 @@ function Chat() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!prompt.trim()) return;
+
+        console.log("handleSubmit - prompt:", prompt);
+        console.log("handleSubmit - isLoading (before):", isLoading);
+        console.log("handleSubmit - selectedModel:", selectedModel);
+
+        if (!prompt.trim()) {
+            toast.warn("Please enter a message before sending.");
+            return;
+        }
+        if(!selectedModel){
+          toast.warn("Please select a model before sending.");
+          return;
+        }
 
         const newSessionId = Date.now().toString();
         const template = promptTemplates.find((t) => t.id === selectedTemplate);
@@ -124,7 +157,11 @@ function Chat() {
         setError(null);
 
         try {
+            console.log("handleSubmit - TRY block start");
+
             const aiResponse = await generateAIResponse(prompt, selectedModel);
+            console.log("handleSubmit - generateAIResponse successful:", aiResponse);
+
             const newAssistantMessage: Message = {
                 id: newSessionId + '-ai',
                 content: aiResponse,
@@ -145,9 +182,11 @@ function Chat() {
                     title: sessionTitle,
                     created_at: new Date().toISOString()
                 }]);
+            console.log("handleSubmit - Supabase session insert result:", sessionError);
 
             if (sessionError) {
                 console.error('Error inserting chat session:', sessionError);
+                toast.error(`Failed to save chat session: ${sessionError.message}`);
                 setError(`Failed to save chat session: ${sessionError.message}`);
                 return;
             }
@@ -158,22 +197,31 @@ function Chat() {
                     { id: newUserMessage.id, session_id: newSessionId, content: newUserMessage.content, role: newUserMessage.role, timestamp: newUserMessage.timestamp.toISOString(), promptTemplateId: newUserMessage.promptTemplateId, model: newUserMessage.model },
                     { id: newAssistantMessage.id, session_id: newSessionId, content: newAssistantMessage.content, role: newAssistantMessage.role, timestamp: newAssistantMessage.timestamp.toISOString(), promptTemplateId: newAssistantMessage.promptTemplateId, model: newAssistantMessage.model }
                 ]);
+            console.log("handleSubmit - Supabase messages insert result:", messagesError);
+
 
             if (messagesError) {
                 console.error('Error inserting messages:', messagesError);
+                toast.error(`Failed to save messages: ${messagesError.message}`);
                 setError(`Failed to save messages: ${messagesError.message}`);
                 await supabase.from('chat_sessions').delete().eq('id', newSessionId);
                 return;
             }
+
+            toast.success("Message sent and response received!");
 
             setPrompt('');
             setTemplateVariables({});
 
         } catch (err: any) {
             console.error("Unexpected error during handleSubmit:", err);
+            toast.error(`Failed to generate response: ${err.message || 'Unknown error'}`);
             setError(`Failed to generate response. Please try again. ${err.message}`);
+
         } finally {
+            console.log("handleSubmit - FINALLY block start");
             setIsLoading(false);
+            console.log("handleSubmit - isLoading (finally):", isLoading);
             setPrompt('');
             setTemplateVariables({});
             setTimeout(() => {
@@ -204,11 +252,9 @@ function Chat() {
     const handleVariableChange = useCallback((variableName: string, value: string) => {
         setTemplateVariables((prev) => ({ ...prev, [variableName]: value }));
 
-        // Update prompt dynamically.
         setPrompt((prevPrompt) => {
             const templateObj = promptTemplates.find((t) => t.id === selectedTemplate);
 
-            // If no template is selected, return the previous prompt unchanged.
             if (!templateObj) return prevPrompt;
 
             const template = templateObj.template || '';
@@ -218,7 +264,6 @@ function Chat() {
             if (allVariables) {
                 allVariables.forEach((variable) => {
                     const varName = variable.name;
-                    // Use the new value if it's the current variable, otherwise use the existing value
                     const varValue = variableName === varName ? value : (templateVariables[varName] || '');
                     newPrompt = newPrompt.replace(`{{${varName}}}`, varValue);
                 });
@@ -234,16 +279,15 @@ function Chat() {
         setTemplateVariables({});
     };
 
-    // New Function: saveToPromptLibrary
     const saveToPromptLibrary = async (message: Message) => {
         if (!userId) {
-            toast.error("You must be logged in to save prompts."); // Use toast
+            toast.error("You must be logged in to save prompts.");
             return;
         }
 
         try {
             const { error } = await supabase
-                .from('userpromptlibrary') // Use your actual table name
+                .from('userpromptlibrary')
                 .insert([{
                     user_id: userId,
                     content: message.content,
@@ -255,14 +299,14 @@ function Chat() {
             if (error) {
                 console.error("Error saving prompt to library:", error);
                 setError(`Failed to save prompt: ${error.message}`);
-                toast.error(`Failed to save prompt: ${error.message}`); // Error toast
+                toast.error(`Failed to save prompt: ${error.message}`);
             } else {
-                toast.success("Prompt saved to library!"); // Success toast
+                toast.success("Prompt saved to library!");
             }
         } catch (err: any) {
             console.error("Unexpected error saving prompt:", err);
             setError(`Unexpected error: ${err.message}`);
-            toast.error(`Unexpected error: ${err.message}`); // Error toast
+            toast.error(`Unexpected error: ${err.message}`);
         }
     };
 
@@ -287,7 +331,7 @@ function Chat() {
             });
           }
           return acc;
-        }, {}); // Initial value is an empty object
+        }, {});
         setChatSummary(summary);
     };
 
@@ -366,7 +410,7 @@ function Chat() {
         fetchChatSessions();
     }, [userId]);
 
-    useEffect(()=> {
+      useEffect(()=> {
         calculateChatSummary();
       }, [chatSessions, userId])
 
@@ -460,20 +504,23 @@ function Chat() {
                                             rows={3}
                                         />
                                         <div className='flex flex-col'>
+                                             {/* --- Model Selection Dropdown --- */}
                                             <Label htmlFor="model">Model</Label>
-                                            <Select onValueChange={setSelectedModel} defaultValue={availableModels[0]}>
+                                            <Select onValueChange={setSelectedModel} value={selectedModel}>
                                                 <SelectTrigger className="w-[180px]">
                                                     <SelectValue placeholder="Select a model" />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {availableModels.map((model) => (
-                                                        <SelectItem key={model} value={model}>{model}</SelectItem>
+                                                        <SelectItem key={model} value={model}>
+                                                            {model}
+                                                        </SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
                                             <button
                                                 type="submit"
-                                                disabled={isLoading || !prompt.trim()}
+                                                disabled={isLoading || !prompt.trim() || !selectedModel}
                                                 className={`self-end rounded-lg px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors ${isDarkTheme ? 'bg-white text-black hover:bg-gray-200' : 'bg-gray-900 text-white hover:bg-gray-800'
                                                     }`}
                                             >
@@ -502,7 +549,7 @@ function Chat() {
                                                 <ChatMessage
                                                     key={message.id}
                                                     message={message}
-                                                    onSave={saveToPromptLibrary} // Correctly passing onSave
+                                                    onSave={saveToPromptLibrary}
                                                 />
                                             ))}
                                         </div>

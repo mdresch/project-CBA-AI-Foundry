@@ -1,46 +1,76 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../utils/supabaseClient'; // Adjust path as needed
+import { supabase } from '../utils/supabaseClient';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+
+interface Profile {
+    first_name: string | null;
+    last_name: string | null;
+    username: string | null;
+    avatar_url: string | null;
+    website: string | null;
+}
 
 const Account = () => {
-  const [displayName, setDisplayName] = useState('');
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [user, setUser] = useState(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true); // Add a loading state
   const navigate = useNavigate();
 
   useEffect(() => {
     const getProfile = async () => {
-      const { data: userData, error: userError } = await supabase.auth.getSession();
+      setLoading(true); // Set loading to true when starting to fetch
+      try {
+        const { data: userData, error: userError } = await supabase.auth.getSession();
 
-      if (userError) {
-        console.error("Error getting user data:", userError);
-        navigate('/signin'); //Redirect to Sign In if there are not the proper credentials.
-        return;
+        if (userError) {
+          console.error("Error getting user data:", userError);
+          navigate('/signin'); //Redirect to Sign In if not authenticated.
+          return;
+        }
+        if (!userData?.session) {
+          console.error("No user session found");
+          navigate('/signin'); //Redirect if no session.
+          return;
+        }
+
+        setUser(userData.session.user);
+
+        const { data, error } = await supabase
+          .from('profiles')
+          .select(`username, first_name, last_name, avatar_url, website`)
+          .eq('id', userData.session.user.id)
+          .single();
+
+        if (error) {
+          console.error("Error getting profile:", error);
+          setError("Failed to load profile data."); // Set an error message
+          return;
+        }
+
+        setProfile(data || { first_name: null, last_name: null, username: null, avatar_url: null, website: null });
+
+      } catch (err: any) {
+        console.error("Unexpected error:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false); // Set loading to false after fetching, success or failure
       }
-      if (!userData?.session) {
-        console.error("Error getting user data:", userError);
-        navigate('/signin'); //Redirect to Sign In if there are not the proper credentials.
-        return;
-      }
+    };
 
-      setUser(userData.session.user); //Gets the session
-
-        const {data, error} = await supabase
-            .from('profiles')
-            .select(`username, full_name, avatar_url, website`)
-            .eq('id', userData.session.user.id)
-            .single()
-
-      if (error) {
-        console.error("Error getting Profile:", error);
-        return;
-      }
-      //If everything worked properly
-        setDisplayName(data?.full_name || '');
-    }
-        getProfile() //Call the function after it is declared
-
+    getProfile();
   }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,10 +79,21 @@ const Account = () => {
     setError(null);
 
     try {
+      if (!profile || !user) {
+        setError("Profile data is not loaded yet.");
+        return;
+      }
+
+      const updates: Partial<Profile> = {};
+      if (profile.first_name !== undefined) updates.first_name = profile.first_name;
+      if (profile.last_name !== undefined) updates.last_name = profile.last_name;
+      if (profile.username !== undefined) updates.username = profile.username;
+      if (profile.avatar_url !== undefined) updates.avatar_url = profile.avatar_url; //Handle if URL field is empty
+      if (profile.website !== undefined) updates.website = profile.website;
 
       const { error } = await supabase
         .from('profiles')
-        .update({ full_name: displayName })
+        .update(updates)
         .eq('id', user.id);
 
       if (error) {
@@ -65,57 +106,108 @@ const Account = () => {
     }
   };
 
+    const handleFirstNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (profile) {
+            setProfile({ ...profile, first_name: e.target.value });
+        }
+    };
+
+    const handleLastNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (profile) {
+            setProfile({ ...profile, last_name: e.target.value });
+        }
+    };
+    const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if(profile) {
+            setProfile({...profile, username: e.target.value});
+        }
+    };
+    const handleWebsiteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if(profile){
+            setProfile({...profile, website: e.target.value});
+        }
+    };
+
   const handleSignOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        setError(error.message);
-      } else {
-        navigate('/signin'); // Redirect to sign-in page
-      }
-    } catch (err: any) {
-      setError(err.message);
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error("Error signing out:", error);
+      setError("Error signing out. Please try again.");
+    } else {
+      navigate('/signin');
     }
   };
 
-  if (!user) {
+
+  if (loading) {
     return <div>Loading...</div>;
   }
+  if (!user || !profile) {
+    return <div>Unable to load profile. Please try again later.</div>;
+  }
+
 
   return (
     <div className="flex justify-center items-center h-screen">
-      <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-2xl font-semibold text-center mb-4">Account</h2>
-        {message && <div className="bg-green-100 text-green-500 p-2 rounded-md mb-4">{message}</div>}
-        {error && <div className="bg-red-100 text-red-500 p-2 rounded-md mb-4">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label htmlFor="displayName" className="block text-gray-700 text-sm font-bold mb-2">Display Name</label>
-            <input
-              type="text"
-              id="displayName"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <button
-              type="submit"
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            >
-              Update Profile
-            </button>
-            <button
-              type="button"
-              className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-              onClick={handleSignOut}
-            >
-              Sign Out
-            </button>
-          </div>
-        </form>
-      </div>
+      <Card className="w-[400px]">
+        <CardHeader>
+          <CardTitle>Account Settings</CardTitle>
+          <CardDescription>Manage your account preferences.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {message && <div className="bg-green-100 text-green-700 p-2 rounded-md mb-4">{message}</div>}
+          {error && <div className="bg-red-100 text-red-700 p-2 rounded-md mb-4">{error}</div>}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid gap-4">
+            <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  type="text"
+                  id="firstName"
+                  placeholder="First Name"
+                  value={profile.first_name || ""}
+                  onChange={handleFirstNameChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  type="text"
+                  id="lastName"
+                  placeholder="Last Name"
+                  value={profile.last_name || ""}
+                  onChange={handleLastNameChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  type="text"
+                  id="username"
+                  placeholder="Username"
+                  value={profile.username || ""}
+                  onChange={handleUsernameChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="website">Website</Label>
+                <Input
+                  type="url"
+                  id="website"
+                  placeholder="https://yourwebsite.com"
+                  value={profile.website || ""}
+                  onChange={handleWebsiteChange}
+                />
+                </div>
+                </div>
+          </form>
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          <Button type="submit" onClick={handleSubmit}>Update Profile</Button>
+          <Button variant="destructive" onClick={handleSignOut}>Sign Out</Button>
+        </CardFooter>
+      </Card>
     </div>
   );
 };

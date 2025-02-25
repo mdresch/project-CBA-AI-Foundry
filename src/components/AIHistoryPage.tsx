@@ -1,50 +1,160 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { BookMarked } from 'lucide-react';
+import { supabase } from '../utils/supabaseClient';
+import { useAuth } from '../context/AuthContext';
+import { Message, ChatSession, PromptTemplate } from '../types';
+import promptTemplatesData from '../data/promptTemplates.json';
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "./ui/table";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import { Button } from "./ui/button";
+import { MoreHorizontal, FileText } from "lucide-react";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter // Import DialogFooter
+  } from "./ui/dialog"
 
-interface Message {
-    id: string;
-    content: string;
-    role: 'user' | 'assistant';
-    timestamp: Date;
-    promptTemplateId?: string; // Optional ID of the template used
+const promptTemplates: PromptTemplate[] = promptTemplatesData as PromptTemplate[];
+
+interface TableRowData {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  model: string;
+  template: string;
+  userMessageContent: string;
+  aiMessageContent?: string; // AI message content is optional
 }
 
-interface ChatSession {
-    id: string;
-    messages: Message[]; // Array of messages within this session
-    sessionTimestamp: Date;
-}
 
 const AIHistoryPage: React.FC = () => {
-    const {isDarkTheme} = useTheme();
-    const [chatSessions, setChatSessions] = useState<ChatSession[]>(() => {
-        try {
-            const storedSessions = localStorage.getItem('chatHistory');
-            console.log("1. Raw data from localStorage:", storedSessions);
-            const initialSessions = storedSessions ? JSON.parse(storedSessions) : [];
-            console.log("2. Parsed chatSessions:", initialSessions);
-            return initialSessions;
-        } catch (error) {
-            console.error("Error loading chat history from localStorage:", error);
-            return [];
-        }
-    });
+    const { isDarkTheme } = useTheme();
+    const [tableData, setTableData] = useState<TableRowData[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const { user } = useAuth();
+    const userId = user?.id;
 
-    const [promptTemplates, setPromptTemplates] = React.useState([]);
+    // State for dialog
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [dialogContent, setDialogContent] = useState("");
+    const [dialogTitle, setDialogTitle] = useState("");
 
-    React.useEffect(() => {
-        const loadData = async () => {
-            try{
-                const data = await import('../data/promptTemplates.json');
-                setPromptTemplates(data.default);
-            } catch (err) {
-              console.error("Error loading promptTemplates", err)
+    useEffect(() => {
+        const fetchChatSessions = async () => {
+            if (!userId) {
+                console.log("User ID not available yet.");
+                return;
             }
-        }
-        loadData();
-    }, [])
 
+            setLoading(true);
+            setError(null);
+
+            try {
+                const { data, error } = await supabase
+                    .from('chat_sessions')
+                    .select(`
+                        id,
+                        created_at,
+                        title,
+                        user_id,
+                        messages (
+                            id,
+                            content,
+                            role,
+                            timestamp,
+                            promptTemplateId,
+                            model,
+                            session_id
+                        )
+                    `)
+                    .eq('user_id', userId)
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    console.error('Error fetching chat sessions:', error);
+                    setError(`Failed to load chat history: ${error.message}`);
+                    return;
+                }
+
+                if (data) {
+                    const formattedData: TableRowData[] = data.map((session: any) => {
+                        const userMessage = session.messages.find((msg: Message) => msg.role === 'user');
+                        const aiMessage = session.messages.find((msg: Message) => msg.role === 'assistant');
+                        const sessionDate = new Date(session.created_at).toLocaleDateString();
+                        const sessionTime = new Date(session.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        const template = promptTemplates.find((t: any) => t.id === userMessage?.promptTemplateId);
+                        const templateName = template ? template.name : "No Template";
+
+                        return {
+                            id: session.id,
+                            title: session.title,
+                            date: sessionDate,
+                            time: sessionTime,
+                            model: userMessage?.model || "Unknown",
+                            template: templateName,
+                            userMessageContent: userMessage?.content || "",
+                            aiMessageContent: aiMessage?.content,
+                        };
+                    });
+                    setTableData(formattedData);
+
+                } else {
+                    setTableData([]);
+                }
+            } catch (err: any) {
+                console.error('Unexpected error fetching chat sessions:', err);
+                setError(`Unexpected error loading chat history: ${err.message || err}`);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchChatSessions();
+    }, [userId]);
+
+     const showPrompt = (content: string) => {
+        setDialogTitle("User Prompt");
+        setDialogContent(content);
+        setDialogOpen(true);
+    };
+
+    const showResponse = (content?: string) => {
+      if (content){
+        setDialogTitle("AI Response");
+        setDialogContent(content);
+        setDialogOpen(true);
+      }
+    };
+
+
+    if (loading) {
+        return <div>Loading chat history...</div>;
+    }
+
+    if (error) {
+        return <div style={{ color: 'red' }}>Error: {error}</div>;
+    }
+    if (!user) {
+      return <div>Please Log in to View History</div>
+    }
 
     return (
         <div className={`min-h-screen pt-16 ${isDarkTheme ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -52,87 +162,78 @@ const AIHistoryPage: React.FC = () => {
                 <div className="mb-8">
                     <h1 className="text-2xl font-semibold mb-4">AI History</h1>
                 </div>
-
-                <div className="space-y-6">
-                    {chatSessions.map(session => {
-                        //Find the user Message
-                        const userMessage = session.messages.find(msg => msg.role === 'user');
-                        //Find the ai Message
-                        const aiMessage = session.messages.find(msg => msg.role === 'assistant');
-
-                        //If there is not a user message then return
-                        if (!userMessage) {
-                            console.warn(`Skipping session ${session.id} because it has no user message`);
-                            return null; // Skip sessions without user messages
-                        }
-                        //Make the Session Date time
-                        const sessionDate = new Date(session.sessionTimestamp).toLocaleDateString();
-                        const sessionTime = new Date(session.sessionTimestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-
-                        const userDate = new Date(userMessage.timestamp).toLocaleDateString();
-                        const userTime = new Date(userMessage.timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-
-                        const aiDate = new Date(aiMessage.timestamp).toLocaleDateString();
-                        const aiTime = new Date(aiMessage.timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-
-                        try {
-                          //Find the Template used.
-                            const template = promptTemplates.find((t: any) => t.id === userMessage.promptTemplateId);
-
-                            // Extract template variables (if available)
-                            let templateVariablesDisplay = null;
-                            if (template?.variables) {
-                                templateVariablesDisplay = (
-                                    <div>
-                                        <h4 className="text-sm font-semibold mt-2">Template Variables:</h4>
-                                        <ul className="list-disc list-inside pl-4">
-                                            {template.variables.map((variable: any) => {
-                                                // Extract the variable value from the userMessage.content
-                                                const regex = new RegExp(`{{${variable.name}}}:\\s*([^\\n]*)`); //Match each line if multiline not working
-                                                const match = userMessage.content.match(regex);
-                                                const variableValue = match ? match[1].trim() : 'N/A';
-                                                return (
-                                                    <li key={variable.name} className="text-xs">
-                                                        {variable.label}: {variableValue}
-                                                    </li>
-                                                );
-                                            })}
-                                        </ul>
-                                    </div>
-                                );
-                            }
-
-                              return (
-                                  <div key={session.id} className={`rounded-lg p-4 shadow-md border ${isDarkTheme ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200'}`}>
-                                      <h2 className="text-lg font-semibold mb-2">Session: {sessionDate} - {sessionTime}</h2>
-
-                                      <div className="mb-4">
-                                          <h3 className="text-md font-medium">User Prompt: {userDate} - {userTime}</h3>
-                                          <p className="text-sm">{userMessage.content}</p>
-                                          {template && (
-                                              <>
-                                                  <h4 className="text-sm font-semibold mt-2">Prompt Template:</h4>
-                                                  <p className="text-xs">{template.name}</p>
-                                                  {templateVariablesDisplay}
-                                              </>
-                                          )}
-                                      </div>
-
-                                      {aiMessage && (
-                                          <div>
-                                              <h3 className="text-md font-medium">AI Response: {aiDate} - {aiTime}</h3>
-                                              <p className="text-sm">{aiMessage.content}</p>
-                                          </div>
-                                      )}
-                                  </div>
-                              );
-                        } catch (error:any) {
-                          console.warn(`Skipping session ${session.id} due to Template Retrieval Error`,error.message)
-                          return null;
-                        }
-
-                    })}
-                </div>
+                <Table>
+                    <TableCaption>A list of your recent chat sessions.</TableCaption>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Time</TableHead>
+                            <TableHead className="w-[400px]">Session Title</TableHead>
+                            <TableHead>Model</TableHead>
+                            <TableHead>Template</TableHead>
+                            <TableHead>Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {tableData.map((row) => (
+                            <TableRow key={row.id}>
+                                <TableCell>{row.date}</TableCell>
+                                <TableCell>{row.time}</TableCell>
+                                <TableCell className="font-medium">{row.title}</TableCell>
+                                <TableCell>{row.model}</TableCell>
+                                <TableCell>{row.template}</TableCell>
+                                <TableCell>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                                <span className="sr-only">Open menu</span>
+                                                <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => showPrompt(row.userMessageContent)}>
+                                                <FileText className="mr-2 h-4 w-4" />
+                                                <span>View User Prompt</span>
+                                            </DropdownMenuItem>
+                                             <DropdownMenuItem onClick={() => showResponse(row.aiMessageContent)}>
+                                              <FileText className="mr-2 h-4 w-4" />
+                                                <span>View AI Response</span>
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>{dialogTitle}</DialogTitle>
+                            <DialogDescription>
+                            <div
+                                className="whitespace-pre-wrap"
+                                style={{
+                                maxHeight: '400px',
+                                overflowY: 'auto',
+                                whiteSpace: 'pre-wrap',
+                                }}
+                            >
+                                {dialogContent}
+                            </div>
+                            </DialogDescription>
+                        </DialogHeader>
+                        {/* DialogFooter with Save and Close buttons */}
+                        <DialogFooter>
+                            <Button type="button" variant="secondary" onClick={() => setDialogOpen(false)}>
+                                Close
+                            </Button>
+                            <Button type="button" onClick={() => { /* Save logic here later */ }}>
+                                Save
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </div>
     );

@@ -231,7 +231,35 @@ function Chat() {
         setPrompt('');
         setTemplateVariables({});
     };
+    // New Function: saveToPromptLibrary
+    const saveToPromptLibrary = async (message: Message) => {
+        if (!userId) {
+            console.error("User not logged in. Cannot save prompt.");
+            return; // Prevent saving if no user
+        }
 
+        try {
+            const { error } = await supabase
+                .from('userPromptLibrary')
+                .insert([{
+                    user_id: userId,
+                    content: message.content,
+                    message_id: message.id, // Store original message ID
+                    prompt_template_id: message.promptTemplateId, // Store template ID
+                    model: message.model,
+                }]);
+
+            if (error) {
+                console.error("Error saving prompt to library:", error);
+                setError(`Failed to save prompt: ${error.message}`);
+            } else {
+                console.log("Prompt saved to library successfully!");
+            }
+        } catch (err: any) {
+            console.error("Unexpected error saving prompt:", err);
+            setError(`Unexpected error: ${err.message}`);
+        }
+    };
     const calculateChatSummary = () => {
         const summary = chatSessions.reduce<{
           [date: string]: { id: string; content: string; time: string; sessionId: string; userId: string }[];
@@ -256,39 +284,6 @@ function Chat() {
         }, {}); // Initial value is an empty object
         setChatSummary(summary);
     };
-
-    // --- New Function: saveToPromptLibrary ---
-    const saveToPromptLibrary = async (message: Message) => {
-        if (!userId) {
-            console.error("User not logged in. Cannot save prompt.");
-            return; // Prevent saving if no user
-        }
-
-        try {
-            const { error } = await supabase
-                .from('userPromptLibrary')
-                .insert([{
-                    user_id: userId,
-                    content: message.content,
-                    message_id: message.id, // Store original message ID
-                    prompt_template_id: message.promptTemplateId, // Store template ID
-                    model: message.model,
-                }]);
-
-            if (error) {
-                console.error("Error saving prompt to library:", error);
-                // Handle the error (e.g., show an error message)
-                setError(`Failed to save prompt: ${error.message}`);
-            } else {
-                console.log("Prompt saved to library successfully!");
-                // Optionally show a success message/toast
-            }
-        } catch (err: any) {
-            console.error("Unexpected error saving prompt:", err);
-            setError(`Unexpected error: ${err.message}`);
-        }
-    };
-    // --- Rest of your component ...
 
     useEffect(() => {
         const fetchChatSessions = async () => {
@@ -500,11 +495,7 @@ function Chat() {
                                             <div key={session.id} id={`session-${session.id}`} className="mb-6">
                                                 {session.messages.map((message) => {
                                                     return (
-                                                        <ChatMessage 
-                                                        key={message.id} 
-                                                        message={message}
-                                                        onSave={saveToPromptLibrary}
-                                                        />
+                                                        <ChatMessage key={message.id} message={message} onSave={saveToPromptLibrary}/>
                                                     );
                                                 })}
                                             </div>

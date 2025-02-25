@@ -33,7 +33,7 @@ const PromptLibrary: React.FC = () => {
 
       try {
         const { data, error } = await supabase
-          .from<PromptLibraryItem>('userPromptLibrary')
+          .from<userpromptlibrary>('userpromptlibrary')
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });

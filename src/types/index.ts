@@ -31,7 +31,7 @@ export interface Message {
     template: string;
     variables?: PromptTemplateVariable[];
   }
-
+  
   export interface PromptLibraryItem {
     id: string;
     user_id: string;

@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button"; // Import Shadcn Button
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { Copy, Save } from 'lucide-react'; // Import the Copy icon
-
+import { toast } from 'react-toastify'; // Import toast
 
 // import promptTemplatesData from '../data/promptTemplates.json';  // Rename import
 // const promptTemplates: PromptTemplate[] = promptTemplatesData as PromptTemplate[];
@@ -27,17 +27,16 @@ interface ChatMessageProps {
     onSave: (message: Message) => void; // Add onSave prop
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = React.memo(({ message }) => {
+const ChatMessage: React.FC<ChatMessageProps> = React.memo(({ message, onSave }) => {
     const { isDarkTheme } = useTheme();
 
     const handleCopyClick = () => {
         navigator.clipboard.writeText(message.content)
             .then(() => {
-                // Optionally show a success message/toast
-                console.log("Message copied to clipboard!");
+                toast.success("Message copied to clipboard!"); // Success toast
             })
             .catch((err) => {
-                // Handle errors (e.g., user denies clipboard access)
+                toast.error("Failed to copy message!"); // Error toast
                 console.error("Failed to copy message:", err);
             });
     };

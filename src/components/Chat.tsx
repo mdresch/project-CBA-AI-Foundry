@@ -1,3 +1,4 @@
+// src/components/Chat.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, Loader2, BookMarked } from 'lucide-react';
 import { generateAIResponse } from '../lib/googleAI';
@@ -10,6 +11,7 @@ import promptTemplatesData from '../data/promptTemplates.json';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
+import { toast } from 'react-toastify'; // Import toast here too
 
 const promptTemplates: PromptTemplate[] = promptTemplatesData as PromptTemplate[];
 
@@ -235,32 +237,35 @@ function Chat() {
     // New Function: saveToPromptLibrary
     const saveToPromptLibrary = async (message: Message) => {
         if (!userId) {
-            console.error("User not logged in. Cannot save prompt.");
-            return; // Prevent saving if no user
+            toast.error("You must be logged in to save prompts."); // Use toast
+            return;
         }
 
         try {
             const { error } = await supabase
-                .from('userPromptLibrary')
+                .from('userpromptlibrary') // Use your actual table name
                 .insert([{
                     user_id: userId,
                     content: message.content,
-                    message_id: message.id, // Store original message ID
-                    prompt_template_id: message.promptTemplateId, // Store template ID
-                    model: message.model,
+                    message_id: message.id,
+                    prompt_template_id: message.promptTemplateId,
+                    model: message.model
                 }]);
 
             if (error) {
                 console.error("Error saving prompt to library:", error);
                 setError(`Failed to save prompt: ${error.message}`);
+                toast.error(`Failed to save prompt: ${error.message}`); // Error toast
             } else {
-                console.log("Prompt saved to library successfully!");
+                toast.success("Prompt saved to library!"); // Success toast
             }
         } catch (err: any) {
             console.error("Unexpected error saving prompt:", err);
             setError(`Unexpected error: ${err.message}`);
+            toast.error(`Unexpected error: ${err.message}`); // Error toast
         }
     };
+
     const calculateChatSummary = () => {
         const summary = chatSessions.reduce<{
           [date: string]: { id: string; content: string; time: string; sessionId: string; userId: string }[];
@@ -490,19 +495,18 @@ function Chat() {
                                 </form>
 
                                 {/* Messages  */}
-                                 {/* MESSAGES */}
                                 <div ref={mainContentRef} className="flex-1 p-4 overflow-y-auto space-y-4">
-                                    {chatSessions.slice(0, maxSessionsDisplayed).map((session) => {
-                                        return (
-                                            <div key={session.id} id={`session-${session.id}`} className="mb-6">
-                                                {session.messages.map((message) => {
-                                                    return (
-                                                        <ChatMessage key={message.id} message={message} onSave={saveToPromptLibrary}/>
-                                                    );
-                                                })}
-                                            </div>
-                                        );
-                                    })}
+                                    {chatSessions.slice(0, maxSessionsDisplayed).map((session) => (
+                                        <div key={session.id} id={`session-${session.id}`} className="mb-6">
+                                            {session.messages.map((message) => (
+                                                <ChatMessage
+                                                    key={message.id}
+                                                    message={message}
+                                                    onSave={saveToPromptLibrary} // Correctly passing onSave
+                                                />
+                                            ))}
+                                        </div>
+                                    ))}
                                     {isLoading && (
                                         <div className="flex justify-start">
                                             <div

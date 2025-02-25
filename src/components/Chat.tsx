@@ -204,33 +204,34 @@ function Chat() {
 
         // Update prompt dynamically.
         setPrompt((prevPrompt) => {
-          const templateObj = promptTemplates.find((t) => t.id === selectedTemplate);
+            const templateObj = promptTemplates.find((t) => t.id === selectedTemplate);
 
-          // If no template is selected, return the previous prompt unchanged.
-          if (!templateObj) return prevPrompt;
+            // If no template is selected, return the previous prompt unchanged.
+            if (!templateObj) return prevPrompt;
 
-          const template = templateObj.template || '';
-          let newPrompt = template;
-          const allVariables = templateObj.variables;
+            const template = templateObj.template || '';
+            let newPrompt = template;
+            const allVariables = templateObj.variables;
 
-          if (allVariables) {
-            allVariables.forEach((variable) => {
-              const varName = variable.name;
-              // Use the new value if it's the current variable, otherwise use the existing value
-              const varValue = variableName === varName ? value : (templateVariables[varName] || '');
-              newPrompt = newPrompt.replace(`{{${varName}}}`, varValue);
-            });
-          }
+            if (allVariables) {
+                allVariables.forEach((variable) => {
+                    const varName = variable.name;
+                    // Use the new value if it's the current variable, otherwise use the existing value
+                    const varValue = variableName === varName ? value : (templateVariables[varName] || '');
+                    newPrompt = newPrompt.replace(`{{${varName}}}`, varValue);
+                });
+            }
 
-          return newPrompt;
+            return newPrompt;
         });
-      }, [selectedTemplate, promptTemplates, templateVariables, setPrompt]); // Include setPrompt
+    }, [selectedTemplate, promptTemplates, templateVariables, setPrompt]);
 
     const clearTemplate = () => {
         setSelectedTemplate('');
         setPrompt('');
         setTemplateVariables({});
     };
+
     // New Function: saveToPromptLibrary
     const saveToPromptLibrary = async (message: Message) => {
         if (!userId) {
@@ -489,6 +490,7 @@ function Chat() {
                                 </form>
 
                                 {/* Messages  */}
+                                 {/* MESSAGES */}
                                 <div ref={mainContentRef} className="flex-1 p-4 overflow-y-auto space-y-4">
                                     {chatSessions.slice(0, maxSessionsDisplayed).map((session) => {
                                         return (

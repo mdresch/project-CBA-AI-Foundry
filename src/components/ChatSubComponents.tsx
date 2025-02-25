@@ -2,44 +2,51 @@
 import React, { useCallback } from 'react';
 import { MessageSquare, Sparkles } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { PromptTemplate, Message } from '../types'; // Import types
+import { PromptTemplate, Message } from '../types';
 import {
     Card,
     CardContent,
     CardDescription,
-    CardFooter, // Import CardFooter
+    CardFooter,
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button"; // Import Shadcn Button
+import { Button } from "@/components/ui/button";
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
-import { Copy, Save } from 'lucide-react'; // Import the Copy icon
-import { toast } from 'react-toastify'; // Import toast
-
-// import promptTemplatesData from '../data/promptTemplates.json';  // Rename import
-// const promptTemplates: PromptTemplate[] = promptTemplatesData as PromptTemplate[];
-
-// ---------------------- Sub-Components -----------------------
+import { Copy, Save } from 'lucide-react';
+import { toast } from 'react-toastify';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { darcula } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface ChatMessageProps {
     message: Message;
-    onSave: (message: Message) => void; // Add onSave prop
+    onSave: (message: Message) => void;
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = React.memo(({ message, onSave }) => {
+    // ... (ChatMessage code remains the same) ...
     const { isDarkTheme } = useTheme();
 
     const handleCopyClick = () => {
         navigator.clipboard.writeText(message.content)
             .then(() => {
-                toast.success("Message copied to clipboard!"); // Success toast
+                toast.success("Message copied to clipboard!");
             })
             .catch((err) => {
-                toast.error("Failed to copy message!"); // Error toast
+                toast.error("Failed to copy message!");
                 console.error("Failed to copy message:", err);
             });
     };
+
+    const codeBlockRegex = /```(\w+)?\n([\s\S]+?)\n```/;
+    const match = message.content.match(codeBlockRegex);
+    const isCode = match !== null;
+    const codeLanguage = match ? (match[1] || 'plaintext') : '';
+    const codeContent = match ? match[2] : '';
+    const nonCodeContent = message.content.split(codeBlockRegex).filter(part => !codeBlockRegex.test(part) && part.trim() !== '').join('\n');
 
     return (
         <div className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -67,29 +74,40 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(({ message, onSave })
                         })}
                     </span>
                 </div>
-                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+
+                {/* --- Markdown and Code Content --- */}
+                <div className="prose prose-sm max-w-none">
+                    {isCode ? (
+                        <SyntaxHighlighter language={codeLanguage} style={darcula}>
+                            {codeContent}
+                        </SyntaxHighlighter>
+                    ) : (
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{nonCodeContent}</ReactMarkdown>
+                    )}
+                </div>
+
                 <div className="flex justify-end mt-2">
                     <button
-                        onClick={handleCopyClick}
-                        className="p-1 rounded hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        title="Copy to Clipboard"
-                    >
-                        <Copy size={16} />
-                    </button>
-                    {/* Save to Library Button */}
-                    <button
-                        onClick={() => onSave(message)} // Call onSave
-                        className="p-1 rounded hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        title="Save to Library"
-                    >
-                        <Save size={16} />
-                    </button>
+                         onClick={handleCopyClick}
+                         className="group p-1 rounded hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                         title="Copy to Clipboard"
+                     >
+                         <Copy size={16} className="group-hover:scale-110 transition-transform" />
+                     </button>
+                     <button
+                         onClick={() => onSave(message)}
+                         className="group p-1 rounded hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                         title="Save to Library"
+                     >
+                         <Save size={16}  className="group-hover:scale-110 transition-transform"/>
+                     </button>
                 </div>
             </div>
         </div>
     );
 });
 
+// --- TemplateForm is now OUTSIDE ChatMessage ---
 interface TemplateFormProps {
     selectedTemplate: string;
     templateVariables: { [key: string]: string };
@@ -103,6 +121,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
     promptTemplates,
     handleVariableChange,
 }) => {
+    // ... (TemplateForm code remains the same) ...
     const { isDarkTheme } = useTheme();
 
     const template = promptTemplates.find((t) => t.id === selectedTemplate);

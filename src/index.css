@@ -69,3 +69,26 @@
       "calt" 1;
   }
 }
+
+/* src/index.css */
+.Toastify__toast-container {
+  /* Global container styles */
+  z-index: 9999; /* Ensure toasts are on top */
+}
+
+.Toastify__toast {
+  /* Global toast styles */
+  border-radius: 8px; /* Rounded corners */
+  font-family: 'Your-Custom-Font', sans-serif; /* Use your app's font */
+}
+
+.Toastify__toast--success {
+    /* Styles for success toasts */
+}
+.Toastify__toast--info {}
+.Toastify__toast--warning {}
+.Toastify__toast--error {}
+
+.Toastify__progress-bar {
+  /* Customize the progress bar */
+}

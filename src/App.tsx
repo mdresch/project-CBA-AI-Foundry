@@ -43,7 +43,7 @@ function App() {
                         </Routes>
                     </div>
                     <ToastContainer
-                        position="bottom-right" // Position of the toast notifications (Best practice is top right)
+                        position="top-right" // Position of the toast notifications (Best practice is top right)
                         autoClose={5000} // Auto close the toast notifications after 5 seconds (5 seconds is better)
                         hideProgressBar={false} // Show the progress bar
                         newestOnTop={true} // Show the newest toast notifications on top in general better UX true

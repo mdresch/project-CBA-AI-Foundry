@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { toast } from 'react-toastify';
+import { CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react';
 
 const promptTemplates: PromptTemplate[] = promptTemplatesData as PromptTemplate[];
 
@@ -186,10 +187,20 @@ function Chat() {
 
             if (sessionError) {
                 console.error('Error inserting chat session:', sessionError);
-                toast.error(`Failed to save chat session: ${sessionError.message}`);
-                setError(`Failed to save chat session: ${sessionError.message}`);
+                toast.error(
+                    <div>
+                        <XCircle className="inline-block mr-2 h-5 w-5 text-red-500" />
+                        Failed to save chat session: {sessionError.message}
+                    </div>, {
+                    className: 'bg-red-100 border-l-4 border-red-500', // Tailwind classes
+                    autoClose: 8000, // Longer duration for errors
+                }
+                );
+
+                setError('Failed to save chat session: $(sessionError.message)');
                 return;
             }
+
 
             const { error: messagesError } = await supabase
                 .from('messages')
@@ -202,13 +213,30 @@ function Chat() {
 
             if (messagesError) {
                 console.error('Error inserting messages:', messagesError);
-                toast.error(`Failed to save messages: ${messagesError.message}`);
+                toast.error(
+                    <div>
+                        <XCircle className="inline-block mr-2 h-5 w-5 text-red-500" />
+                        Failed to save messages: {messagesError.message}
+                    </div>,
+                    {
+                      className: 'bg-red-100 border-l-4 border-red-500',
+                      autoClose: 8000,
+                    }
+                );
                 setError(`Failed to save messages: ${messagesError.message}`);
                 await supabase.from('chat_sessions').delete().eq('id', newSessionId);
                 return;
             }
-
-            toast.success("Message sent and response received!");
+        
+            toast.success(
+                <div>
+                    <CheckCircle className="inline-block mr-2 h-5 w-5 text-green-500" />
+                    Message sent and response received!
+                </div>,
+              {
+                className: 'bg-green-100 border-l-4 border-green-500'
+              }
+            );
 
             setPrompt('');
             setTemplateVariables({});

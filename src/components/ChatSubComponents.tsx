@@ -3,17 +3,18 @@ import React, { useCallback } from 'react';
 import { MessageSquare, Sparkles } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { PromptTemplate, Message } from '../types';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
-import 'react-circular-progressbar/dist/styles.css';
+// Removed unused imports:
+// import {
+//     Card,
+//     CardContent,
+//     CardDescription,
+//     CardFooter,
+//     CardHeader,
+//     CardTitle,
+// } from "@/components/ui/card";
+// import { Button } from "@/components/ui/button";
+// import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
+import 'react-circular-progressbar/dist/styles.css'; // Keep this - it's for CSS
 import { Copy, Save } from 'lucide-react';
 import { toast } from 'react-toastify';
 import ReactMarkdown from 'react-markdown';
@@ -27,7 +28,6 @@ interface ChatMessageProps {
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = React.memo(({ message, onSave }) => {
-    // ... (ChatMessage code remains the same) ...
     const { isDarkTheme } = useTheme();
 
     const handleCopyClick = () => {
@@ -46,7 +46,11 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(({ message, onSave })
     const isCode = match !== null;
     const codeLanguage = match ? (match[1] || 'plaintext') : '';
     const codeContent = match ? match[2] : '';
-    const nonCodeContent = message.content.split(codeBlockRegex).filter(part => !codeBlockRegex.test(part) && part.trim() !== '').join('\n');
+    const nonCodeContent = message.content
+        .split(codeBlockRegex)
+        .filter(part => typeof part === 'string' && !codeBlockRegex.test(part) && part.trim() !== '')
+        .join('\n');
+
 
     return (
         <div className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -75,14 +79,13 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(({ message, onSave })
                     </span>
                 </div>
 
-                {/* --- Markdown and Code Content --- */}
                 <div className="prose prose-sm max-w-none">
                     {isCode ? (
                         <SyntaxHighlighter language={codeLanguage} style={darcula}>
                             {codeContent}
                         </SyntaxHighlighter>
                     ) : (
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{nonCodeContent}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} children={nonCodeContent} />
                     )}
                 </div>
 
@@ -107,7 +110,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(({ message, onSave })
     );
 });
 
-// --- TemplateForm is now OUTSIDE ChatMessage ---
 interface TemplateFormProps {
     selectedTemplate: string;
     templateVariables: { [key: string]: string };
@@ -121,7 +123,6 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
     promptTemplates,
     handleVariableChange,
 }) => {
-    // ... (TemplateForm code remains the same) ...
     const { isDarkTheme } = useTheme();
 
     const template = promptTemplates.find((t) => t.id === selectedTemplate);

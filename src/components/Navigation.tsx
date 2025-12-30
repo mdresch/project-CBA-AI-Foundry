@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MessageSquare, LayoutDashboard, Library, Sun, Moon, Home } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
+import { MessageSquare, LayoutDashboard, Library, Sun, Moon, Home, BarChart3 } from 'lucide-react';
+import { useTheme } from '../context/useTheme';
 import { supabase } from "../utils/supabaseClient";  //Import the client to see the new information
 
 function Navigation() {
@@ -26,7 +26,14 @@ function Navigation() {
         {path: '/chat', icon: MessageSquare, label: 'Chat'},
         {path: '/dashboard', icon: LayoutDashboard, label: 'Analytics'},
         {path: '/library', icon: Library, label: 'Prompt Library'},
-        {path: '/AIHistory', icon: MessageSquare, label: 'AI History'}
+        {path: '/AIHistory', icon: MessageSquare, label: 'AI History'},
+        {path: '/docs', icon: Library, label: 'Docs'},
+        {path: '/actions-demo', icon: MessageSquare, label: 'Actions Demo'},
+        {path: '/chain-of-thought-demo', icon: MessageSquare, label: 'Chain of Thought Demo'},
+        {path: '/suggestion-chips-demo', icon: MessageSquare, label: 'Suggestion Chips Demo'},
+        {path: '/ai-suggestion-chips-demo', icon: MessageSquare, label: 'AI Suggestion Chips Demo'},
+        {path: '/auto-scroll-conversation-demo', icon: MessageSquare, label: 'Auto-Scroll Conversation Demo'},
+        {path: '/analytics', icon: BarChart3, label: 'Analytics Dashboard'}
     ];
 
     return (

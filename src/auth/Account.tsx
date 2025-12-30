@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../utils/supabaseClient';
+import { mapProfileRow } from '../utils/dbMappers';
+import type { User, SupabaseClient } from '@supabase/supabase-js';
 import {
   Card,
   CardContent,
@@ -21,9 +23,9 @@ interface Profile {
     website: string | null;
 }
 
-const Account = () => {
+const Account: React.FC = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true); // Add a loading state
@@ -33,10 +35,12 @@ const Account = () => {
     const getProfile = async () => {
       setLoading(true); // Set loading to true when starting to fetch
       try {
-        const { data: userData, error: userError } = await supabase.auth.getSession();
+        const sessionResp = await supabase.auth.getSession();
+        const userData = sessionResp.data;
+        const sessionError = 'error' in sessionResp ? (sessionResp as { error?: unknown }).error ?? null : null;
 
-        if (userError) {
-          console.error("Error getting user data:", userError);
+        if (sessionError) {
+          console.error("Error getting user data:", sessionError);
           navigate('/signin'); //Redirect to Sign In if not authenticated.
           return;
         }
@@ -48,23 +52,31 @@ const Account = () => {
 
         setUser(userData.session.user);
 
-        const { data, error } = await supabase
+        const query = (supabase as unknown as SupabaseClient)
           .from('profiles')
           .select(`username, first_name, last_name, avatar_url, website`)
           .eq('id', userData.session.user.id)
           .single();
+        const { data, error } = await (query as unknown) as { data: unknown | null; error: Error | null };
 
         if (error) {
-          console.error("Error getting profile:", error);
-          setError("Failed to load profile data."); // Set an error message
+          console.error('Error getting profile:', error);
+          setError('Failed to load profile data.'); // Set an error message
           return;
         }
 
-        setProfile(data || { first_name: null, last_name: null, username: null, avatar_url: null, website: null });
+        if (data) {
+          const dbRow = data as unknown as import('../utils/dbMappers').DBProfileRow;
+          const mapped = mapProfileRow(dbRow);
+          setProfile(mapped);
+        } else {
+          setProfile({ first_name: null, last_name: null, username: null, avatar_url: null, website: null });
+        }
 
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Unexpected error:", err);
-        setError(err.message);
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message);
       } finally {
         setLoading(false); // Set loading to false after fetching, success or failure
       }
@@ -91,7 +103,7 @@ const Account = () => {
       if (profile.avatar_url !== undefined) updates.avatar_url = profile.avatar_url; //Handle if URL field is empty
       if (profile.website !== undefined) updates.website = profile.website;
 
-      const { error } = await supabase
+      const { error } = await (supabase as unknown as SupabaseClient)
         .from('profiles')
         .update(updates)
         .eq('id', user.id);
@@ -101,8 +113,9 @@ const Account = () => {
       } else {
         setMessage('Profile updated successfully!');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
     }
   };
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../context/useTheme';
 import { ArrowRight, Brain, Shield, Clock, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -93,6 +93,24 @@ function Landing() {
               To revolutionize the way organizations interact with AI by providing
               a secure, intuitive platform that transforms complex language models
               into actionable business insights.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* About LLM Memory */}
+      <div className="py-12">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h3 className="text-2xl font-semibold mb-4 text-center">How the LLM 'Remembers' — a short explainer</h3>
+          <div className={`p-6 rounded-lg ${isDarkTheme ? 'bg-zinc-800 text-gray-200' : 'bg-gray-50 text-gray-900'}`}>
+            <p className="mb-3">
+              The model itself is intentionally stateless — it doesn't store long-term memory. Instead, applications (like this chat) are responsible for storing and retrieving history from a database (for example Supabase).
+            </p>
+            <p className="mb-3">
+              For large histories we use a Retrieval-Augmented Generation (RAG) pattern: the app stores conversation snippets (often vectorized), searches for the most relevant pieces when you ask a new question, and then includes those snippets in the prompt sent to the model. This keeps the model fast while enabling long-term memory.
+            </p>
+            <p>
+              This separation keeps the LLM scalable and flexible: you can choose the storage and retrieval strategy that suits your needs (Supabase, a dedicated vector DB, Redis, etc.).
             </p>
           </div>
         </div>

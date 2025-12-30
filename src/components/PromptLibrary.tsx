@@ -1,7 +1,8 @@
 // src/components/PromptLibrary.tsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
-import { useAuth } from '../context/AuthContext';
+import { mapPromptLibraryRow } from '../utils/dbMappers';
+import { useAuth } from '../context/useAuth';
 import { Loader2 } from 'lucide-react';
 
 interface PromptLibraryItem {
@@ -32,25 +33,29 @@ const PromptLibrary: React.FC = () => {
       setError(null);
 
       try {
-        const { data, error } = await supabase
-          .from<userpromptlibrary>('userpromptlibrary')
+        const userId = (user as unknown as { id?: string | undefined })?.id;
+        const query = (supabase as unknown as import('@supabase/supabase-js').SupabaseClient)
+          .from('userpromptlibrary')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .order('created_at', { ascending: false });
+        const { data, error } = await (query as unknown) as { data: unknown[] | null; error: Error | null };
 
         if (error) {
           setError(`Error fetching prompts: ${error.message}`);
-          console.error("Error fetching prompts:", error);
+          console.error('Error fetching prompts:', error);
           return;
         }
 
         if (data) {
-          setPrompts(data);
+          const rows = (data ?? []) as unknown[];
+          setPrompts(rows.map((r) => mapPromptLibraryRow(r as unknown as import('../utils/dbMappers').DBPromptLibraryRow)));
         } else {
           setPrompts([]); // Set to empty array if no data
         }
-      } catch (err: any) {
-        setError(`Unexpected error: ${err.message}`);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        setError(`Unexpected error: ${message}`);
         console.error("Unexpected error fetching prompts:", err);
       } finally {
         setLoading(false);

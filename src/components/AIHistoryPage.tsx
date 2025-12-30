@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../context/useTheme';
 import { supabase } from '../utils/supabaseClient';
-import { useAuth } from '../context/AuthContext';
-import { Message, ChatSession, PromptTemplate } from '../types';
+import { useAuth } from '../context/useAuth';
+import { PromptTemplate } from '../types';
+import { mapSessionRow } from '../utils/dbMappers';
 import promptTemplatesData from '../data/promptTemplates.json';
 import {
   Table,
@@ -68,8 +69,8 @@ const AIHistoryPage: React.FC = () => {
             setError(null);
 
             try {
-                const { data, error } = await supabase
-                    .from('chat_sessions')
+                const query = supabase
+                    .from('sessions')
                     .select(`
                         id,
                         created_at,
@@ -79,14 +80,15 @@ const AIHistoryPage: React.FC = () => {
                             id,
                             content,
                             role,
-                            timestamp,
-                            promptTemplateId,
+                            created_at,
                             model,
-                            session_id
+                            session_id,
+                            status
                         )
                     `)
                     .eq('user_id', userId)
                     .order('created_at', { ascending: false });
+                const { data, error } = await query as unknown as { data: unknown[] | null; error: Error | null };
 
                 if (error) {
                     console.error('Error fetching chat sessions:', error);
@@ -95,22 +97,25 @@ const AIHistoryPage: React.FC = () => {
                 }
 
                 if (data) {
-                    const formattedData: TableRowData[] = data.map((session: any) => {
-                        const userMessage = session.messages.find((msg: Message) => msg.role === 'user');
-                        const aiMessage = session.messages.find((msg: Message) => msg.role === 'assistant');
-                        const sessionDate = new Date(session.created_at).toLocaleDateString();
-                        const sessionTime = new Date(session.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        const template = promptTemplates.find((t: any) => t.id === userMessage?.promptTemplateId);
-                        const templateName = template ? template.name : "No Template";
+                    const rows = (data ?? []) as unknown[];
+                    const formattedData: TableRowData[] = rows.map((r) => {
+                        const s = mapSessionRow(r as unknown as import('../utils/dbMappers').DBSessionRow);
+                        const userMessage = s.messages.find((m) => m.role === 'user');
+                        const aiMessage = s.messages.find((m) => m.role === 'assistant');
+                        const createdAt = s.created_at;
+                        const sessionDate = createdAt ? new Date(createdAt).toLocaleDateString() : '';
+                        const sessionTime = createdAt ? new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                        // Since promptTemplateId is not in the database schema, we'll show 'No Template' for now
+                        const templateName = 'No Template';
 
                         return {
-                            id: session.id,
-                            title: session.title,
+                            id: s.id || '',
+                            title: s.title || '',
                             date: sessionDate,
                             time: sessionTime,
-                            model: userMessage?.model || "Unknown",
+                            model: (userMessage as unknown as { model?: string | undefined })?.model || 'Unknown',
                             template: templateName,
-                            userMessageContent: userMessage?.content || "",
+                            userMessageContent: userMessage?.content || '',
                             aiMessageContent: aiMessage?.content,
                         };
                     });
@@ -119,9 +124,10 @@ const AIHistoryPage: React.FC = () => {
                 } else {
                     setTableData([]);
                 }
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error('Unexpected error fetching chat sessions:', err);
-                setError(`Unexpected error loading chat history: ${err.message || err}`);
+                const message = err instanceof Error ? err.message : String(err);
+                setError(`Unexpected error loading chat history: ${message}`);
             } finally {
                 setLoading(false);
             }
@@ -150,7 +156,7 @@ const AIHistoryPage: React.FC = () => {
     }
 
     if (error) {
-        return <div style={{ color: 'red' }}>Error: {error}</div>;
+        return <div className="text-red-500">Error: {error}</div>;
     }
     if (!user) {
       return <div>Please Log in to View History</div>
@@ -211,14 +217,7 @@ const AIHistoryPage: React.FC = () => {
                         <DialogHeader>
                             <DialogTitle>{dialogTitle}</DialogTitle>
                             <DialogDescription>
-                            <div
-                                className="whitespace-pre-wrap"
-                                style={{
-                                maxHeight: '400px',
-                                overflowY: 'auto',
-                                whiteSpace: 'pre-wrap',
-                                }}
-                            >
+                            <div className="whitespace-pre-wrap max-h-96 overflow-y-auto">
                                 {dialogContent}
                             </div>
                             </DialogDescription>

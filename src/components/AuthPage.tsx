@@ -9,7 +9,7 @@ export function AuthPage() {
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const { data, error } = await supabase.auth.signInWithOtp({
+      const { error } = await supabase.auth.signInWithOtp({
         email: email,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`
@@ -20,8 +20,9 @@ export function AuthPage() {
 
       setMessage('Check your email for the login link!')
       setError('')
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'An error occurred')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An error occurred';
+      setError(message)
       setMessage('')
     }
   }

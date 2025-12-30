@@ -1,10 +1,12 @@
 // TemplateForm.tsx
 import React from 'react';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../context/useTheme';
+
+import { PromptTemplate } from '../types';
 
 interface TemplateFormProps {
     selectedTemplate: string;
-    promptTemplates: any[]; // Replace 'any' with the correct type
+    promptTemplates: PromptTemplate[];
     templateVariables: { [key: string]: string };
     handleVariableChange: (variableName: string, value: string) => void;
 }

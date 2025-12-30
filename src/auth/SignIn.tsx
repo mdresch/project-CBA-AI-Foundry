@@ -15,7 +15,7 @@ const SignIn = () => {
     setError(null);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: email,
         password: password,
       });
@@ -25,8 +25,9 @@ const SignIn = () => {
       } else {
         navigate('/dashboard'); // Redirect to the dashboard on successful login
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
     }
   };
 

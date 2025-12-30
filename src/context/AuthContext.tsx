@@ -1,26 +1,16 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../utils/supabaseClient';  // Your Supabase client
-
-//Create a type for AuthContext Props
-type AuthContextProps = {
-  session: any,
-  user: any,
-  isLoading: boolean,
-  error: any
-}
-
-// 1. Create a Context
-const AuthContext = createContext<AuthContextProps | undefined>(undefined);
+import { AuthContext } from './authContextValue';
 
 // 2. Create a Provider
-export const AuthProvider = ({ children }: any) => {
-  const [session, setSession] = useState<any>(null);
-  const [user, setUser] = useState<any>(null);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [session, setSession] = useState<unknown | null>(null);
+  const [user, setUser] = useState<unknown | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<unknown | null>(null);
 
   useEffect(() => {
-    let subscription: any = null;
+  let subscription: { data?: { subscription?: { unsubscribe: () => void } } } | null = null;
 
     const fetchSession = async () => {
       try {
@@ -38,10 +28,15 @@ export const AuthProvider = ({ children }: any) => {
         const authListener = supabase.auth.onAuthStateChange(
           async (_event, session) => {
             try {
-              setSession(session);
-              setUser(session?.user || null); // Update user based on session
+              setSession(session as unknown);
+              const sess = session as Record<string, unknown> | null;
+              if (sess && 'user' in sess) {
+                setUser((sess as { user?: unknown }).user || null);
+              } else {
+                setUser(null);
+              }
               setIsLoading(false);
-            } catch (subscribeError: any) {
+            } catch (subscribeError: unknown) {
               console.error("Error in auth state change handler:", subscribeError);
               setError(subscribeError);
               setIsLoading(false);
@@ -52,7 +47,7 @@ export const AuthProvider = ({ children }: any) => {
         subscription = authListener; // Store the subscription
 
 
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Unexpected error in auth provider:", err);
         setError(err);
         setIsLoading(false);
@@ -79,10 +74,4 @@ export const AuthProvider = ({ children }: any) => {
 };
 
 // 3. Create a custom hook to use the context
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
+// Note: useAuth hook moved to './useAuth.ts' to keep this file exporting only the provider component.

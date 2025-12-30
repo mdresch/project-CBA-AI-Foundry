@@ -13,7 +13,7 @@ const SignUp = () => {
     setError(null);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email: email,
         password: password,
       });
@@ -23,8 +23,9 @@ const SignUp = () => {
       } else {
         navigate('/dashboard'); // Redirect to the dashboard on successful signup
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
     }
   };
 

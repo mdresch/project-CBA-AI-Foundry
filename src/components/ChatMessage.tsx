@@ -1,7 +1,7 @@
 // ChatMessage.tsx
 import React from 'react';
 import { MessageSquare, Sparkles } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../context/useTheme';
 import { Message } from '../types'; // Assuming you have a types.ts file
 
 interface ChatMessageProps {
